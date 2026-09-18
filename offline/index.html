@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Offline Arcade</title>
+<style>
+:root{--ink:#f7f4eb;--muted:#a8a49a;--bg:#11120f;--panel:#1b1d18;--line:#32352d;--accent:#e4ff54;--accent2:#ff7658}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:Georgia,'Times New Roman',serif}body{overflow-x:hidden}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.18;background-image:linear-gradient(transparent 95%,#fff 96%),linear-gradient(90deg,transparent 95%,#fff 96%);background-size:31px 31px;mask-image:linear-gradient(to bottom,#000,transparent 80%)}
+.shell{width:min(1400px,calc(100% - 40px));margin:auto;padding:34px 0 60px}.top{display:flex;justify-content:space-between;align-items:end;gap:24px;border-bottom:1px solid var(--line);padding-bottom:24px}.eyebrow{font:700 11px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.16em;text-transform:uppercase;color:var(--accent)}h1{font-size:clamp(42px,7vw,92px);line-height:.9;letter-spacing:-.04em;margin:12px 0 0;font-weight:700}.intro{max-width:430px;color:var(--muted);font:14px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;text-align:right}.tools{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:26px 0}.count{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted)}.search{width:min(360px,55vw);border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:12px 17px;font:14px ui-monospace,SFMono-Regular,Menlo,monospace;outline:none}.search:focus{border-color:var(--accent)}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:16px}.tile{position:relative;min-width:0;border:1px solid var(--line);border-radius:18px;background:var(--panel);overflow:hidden;cursor:pointer;transition:transform .22s,border-color .22s,box-shadow .22s;animation:rise .45s both}.tile:hover{transform:translateY(-5px) rotate(-.3deg);border-color:var(--accent);box-shadow:0 12px 35px #0008}.preview{height:126px;background:#282b24;position:relative;overflow:hidden;border-bottom:1px solid var(--line)}.preview iframe{position:absolute;border:0;width:900px;height:620px;transform:scale(.22);transform-origin:top left;pointer-events:none;background:white}.fallback{position:absolute;inset:0;display:grid;place-items:center;font-size:48px;color:#fff;background:linear-gradient(135deg,#2e342a,#8b4d38)}.tile:nth-child(3n) .fallback{background:linear-gradient(135deg,#273a45,#a77636)}.tile:nth-child(4n) .fallback{background:linear-gradient(135deg,#412d42,#df6f6f)}.label{display:block;padding:14px 14px 16px;font-size:16px;line-height:1.08;min-height:60px}.tag{display:block;color:var(--muted);font:10px ui-monospace,SFMono-Regular,Menlo,monospace;margin-top:7px;text-transform:uppercase;letter-spacing:.08em}.empty{grid-column:1/-1;padding:60px 0;color:var(--muted);font:14px ui-monospace,SFMono-Regular,Menlo,monospace}.player{position:fixed;z-index:10;inset:0;background:#080908;display:none;flex-direction:column}.player.open{display:flex}.playerbar{height:58px;flex:0 0 58px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid #272a24;background:#12140f}.playing{font-size:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.close{border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:999px;padding:9px 15px;cursor:pointer;font:12px ui-monospace,SFMono-Regular,Menlo,monospace}.close:hover{border-color:var(--accent);color:var(--accent)}#gameFrame{width:100%;height:calc(100vh - 58px);border:0;background:#fff}@keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}@media(max-width:650px){.shell{width:min(100% - 24px,500px);padding-top:22px}.top{display:block}.intro{text-align:left;margin-top:20px}.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.preview{height:105px}.preview iframe{transform:scale(.18)}.label{font-size:14px;padding:11px;min-height:55px}.tools{margin:18px 0}.search{width:58vw}}
+.preview img{width:100%;height:100%;object-fit:cover;display:block}.loader{position:absolute;inset:58px 0 0;background:#080908;display:grid;place-items:center;z-index:2}.loader-box{width:min(420px,calc(100% - 40px));text-align:center}.loader-title{font-size:28px;margin-bottom:10px}.loader-copy{color:var(--muted);font:12px ui-monospace,SFMono-Regular,Menlo,monospace;margin-bottom:22px}.progress-track{height:12px;border:1px solid var(--line);border-radius:999px;padding:2px;background:#12140f}.progress-fill{height:100%;width:0;border-radius:999px;background:var(--accent);transition:width .2s linear}.progress-number{font:700 24px ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--accent);margin-top:14px}.loader.done{display:none}
+</style>
+</head>
+<body>
+<main class="shell" id="library">
+<header class="top"><div><div class="eyebrow">offline / arcade index</div><h1>Pick a game.</h1></div><p class="intro">A local shelf of games. No accounts, no ads, no connection required.</p></header>
+<div class="tools"><span class="count" id="count"></span><input class="search" id="search" type="search" placeholder="Search the shelf..." aria-label="Search games"></div>
+<section class="grid" id="grid"></section>
+</main>
+<section class="player" id="player" aria-hidden="true"><div class="playerbar"><div class="playing" id="playing"></div><button class="close" id="close" type="button">Back to shelf</button></div><div class="loader" id="loader"><div class="loader-box"><div class="loader-title">Loading game</div><div class="loader-copy" id="loaderCopy">Preparing game...</div><div class="progress-track"><div class="progress-fill" id="progressFill"></div></div><div class="progress-number" id="progressNumber">0%</div></div></div><iframe id="gameFrame" title="Game"></iframe></section>
+<script>
+const gameFiles=`
+1-on-1-soccer.html
+1-on-1-tennis.html
+12-mini-battles.html
+1v1.lol.html
+2048-cupcakes.html
+2048.html
+8-ball-classic.html
+Alpha_1.2.6.html
+Beta_1.3.html
+Indev.html
+agar-io-lite.html
+age-of-war-2.html
+age-of-war.html
+among-us.html
+angry-birds.html
+awesome-tanks-2.html
+awesome-tanks.html
+backrooms.html
+bacon-may-die.html
+bad-ice-cream-3.html
+bad-piggies.html
+baldis-basics.html
+baseball-bros.html
+basket-bros.html
+basket-random.html
+basketball-legends.html
+basketball-stars.html
+bitlife.html
+blocky-snakes.html
+bloons-TD-5.html
+bloxorz.html
+bob-the-robber-5.html
+bow-masters.html
+boxing-random.htm
+breaking-the-bank.html
+bubble-shooter.html
+candy-crush.html
+capybara-clicker.html
+chess.html
+circloO-2.html
+circloO.html
+clash-of-vikings.html
+cookie-clicker.htm
+crazy-cars.html
+crossy-road.htm
+cut-the-rope.html
+dadish-3.html
+death-run-3D.html
+doodle-jump.html
+draw-climber.html
+dreadhead-parkour.htm
+drift-boss.htm
+drive-mad.htm
+duck-life-5.html
+ducklings-io.html
+earn-to-die-2.html
+eggy-car.html
+elastic-face.htm
+escape-road.html
+escaping-the-prison.html
+fancy-pants-adventure-2.html
+fancy-pants-adventure.html
+fireboy-and-watergirl-4.html
+flappy-bird.html
+flood-runner-4.html
+fnaf-4.html
+football-bros.html
+football-legends.html
+free-rider-3.html
+fruit-ninja.html
+funny-battle-2.html
+funny-battle.html
+geometry-dash.html
+get-on-top.html
+getaway-shootout.htm
+google-baseball.html
+google-dino.html
+granny.html
+hanger-2.html
+happy-wheels.html
+helix-jump.html
+hill-climb-racing-lite.html
+hole-io.html
+house-of-hazards.html
+idle-breakout.html
+iron-snout.html
+jetpack-joyride.html
+johnny-trigger.html
+level-devil.html
+minesweeper.html
+moto-x3m-winter.html
+moto-x3m.htm
+noob-miner.html
+ovo-2.html
+ovo.html
+pac-man.html
+papas-bakeria.html
+papas-burgeria.html
+papas-cheeseria.html
+papas-cupcakeria.html
+papas-donuteria.html
+papas-freezeria.html
+papas-hot-doggeria.html
+papas-pancakeria.html
+papas-pastaria.html
+papas-pizzeria.html
+papas-scooperia.html
+papas-sushiria.html
+papas-taco-mia.html
+parking-fury-3.html
+picos-school.html
+ping-pong-chaos.html
+plants-vs-zombies.html
+pou.html
+ragdoll-archers.htm
+red-ball-4-vol-3.html
+retro-bowl.html
+retro-highway.html
+retro-ping-pong.html
+riddle-school-5.html
+rooftop-snipers.htm
+run-3.html
+sand-game.html
+slope-2-player.html
+slope.html
+snow-road.htm
+soccer-bros.html
+soccer-random.htm
+space-is-key-2.html
+space-is-key.html
+spacebar-clicker.html
+stack.html
+state-io.html
+stick-archers-battle.html
+stick-fighter.html
+stick-merge.html
+stickman-hook.html
+subway-surfers-san-francisco.html
+superhot.html
+tag.html
+temple-of-boom.html
+temple-run-2.htm
+territorial-io.html
+the-impossible-quiz.html
+this-is-the-only-level.html
+time-shooter-2.html
+time-shooter-3.htm
+tiny-fishing.html
+tomb-of-the-mask.htm
+trap-the-cat.html
+trivia-crack.html
+tube-jumpers.html
+tunnel-rush.html
+unicycle-hero.html
+vex-8.htm
+vex-x3m-2.html
+vex-x3m.html
+volley-random.html
+we-become-what-we-behold.html
+wheelie-bike.html
+wheely-8.html
+wordle-unlimited.html
+worlds-hardest-game-3.html
+wrestle-bros.html
+karate-bros.html
+learn-to-fly-2.html
+monkey-mart.htm
+monster-tracks.html
+papas-wingeria.html
+paper-io-2.htm
+rooftop-snipers-2.html
+zombie-rush.html`.trim().split(/\n/);
+const grid=document.querySelector('#grid'),search=document.querySelector('#search'),count=document.querySelector('#count'),player=document.querySelector('#player'),frame=document.querySelector('#gameFrame'),playing=document.querySelector('#playing'),loader=document.querySelector('#loader'),progressFill=document.querySelector('#progressFill'),progressNumber=document.querySelector('#progressNumber'),loaderCopy=document.querySelector('#loaderCopy');
+const titleOf=file=>file.replace(/\.(html|htm)$/,'').replace(/[-_]/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+async function loadArtwork(tile){const file=tile.dataset.file;const fallback=tile.querySelector('.fallback');try{const html=await fetch(encodeURI(file)).then(response=>response.text());const match=html.match(/<meta[^>]+(?:property=["']og:image["']|name=["']twitter:image["'])[^>]+content=["']([^"']+)|<link[^>]+rel=["'][^"']*icon[^"']*["'][^>]+href=["']([^"']+)|<img[^>]+src=["']([^"']+)/i);const source=match&&(match[1]||match[2]||match[3]);if(source&&!/^javascript:|^about:/i.test(source)){const image=document.createElement('img');image.loading='lazy';image.alt=titleOf(file);image.src=new URL(source,file).href;image.onload=()=>fallback.replaceWith(image)}}catch(error){}}
+const artworkObserver=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){artworkObserver.unobserve(entry.target);loadArtwork(entry.target)}}),{rootMargin:'500px'});
+function render(){const query=search.value.trim().toLowerCase();const visible=gameFiles.filter(file=>titleOf(file).toLowerCase().includes(query));count.textContent=`${visible.length} games / local library`;grid.innerHTML=visible.length?visible.map((file,index)=>{const title=titleOf(file);const letter=title.charAt(0);return `<article class="tile" data-file="${file}" style="animation-delay:${Math.min(index*12,260)}ms"><div class="preview"><div class="fallback">${letter}</div></div><span class="label">${title}<small class="tag">play offline</small></span></article>`}).join(''):'<div class="empty">No games match that search.</div>';grid.querySelectorAll('.tile').forEach(tile=>{tile.addEventListener('click',()=>openGame(tile.dataset.file));artworkObserver.observe(tile)})}
+function openGame(file){playing.textContent=titleOf(file);loader.classList.remove('done');player.classList.add('open');player.setAttribute('aria-hidden','false');document.body.style.overflow='hidden';frame.src=new URL(encodeURI(file),document.baseURI).href;const duration=50000+Math.floor(Math.random()*20001),started=Date.now();progressFill.style.width='0%';progressNumber.textContent='0%';loaderCopy.textContent='Loading '+titleOf(file)+'...';function tick(){const elapsed=Date.now()-started;const percent=Math.min(100,Math.floor(elapsed/duration*100));const remaining=Math.max(0,Math.ceil((duration-elapsed)/1000));progressFill.style.width=percent+'%';progressNumber.textContent=percent+'%';loaderCopy.textContent=percent<100?'Loading '+titleOf(file)+'... '+remaining+'s remaining':'Ready';if(percent<100)requestAnimationFrame(tick);else loader.classList.add('done')}requestAnimationFrame(tick)}
+function closeGame(){frame.src='about:blank';player.classList.remove('open');player.setAttribute('aria-hidden','true');document.body.style.overflow=''}
+search.addEventListener('input',render);document.querySelector('#close').addEventListener('click',closeGame);window.addEventListener('keydown',event=>{if(event.key==='Escape'&&player.classList.contains('open'))closeGame()});render();
+</script>
+</body>
+</html>
